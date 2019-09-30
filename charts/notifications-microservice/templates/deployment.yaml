@@ -19,6 +19,13 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
     spec:
+      volumes:
+        - name: google-cloud-key
+          secret:
+            secretName: notifications-microservice-pubsub-key
+        - name: dotenv-json
+          secret:
+            secretName: notifications-microservice-dotenv
       containers:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

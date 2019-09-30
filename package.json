@@ -1,10 +1,9 @@
 {
-  "name": "REPLACE_ME",
+  "name": "SEIU775BG notifications-microservice",
   "version": "1.0.0",
-  "description": "Simple Hello World that listens on localhost:8080",
-  "main": "server.js",
+  "description": "Notifications microservice",
+  "main": "worker.js",
   "scripts": {
-    "test": "echo \"no test specified\" && exit 0",
-    "start": "node server.js"
+    "start": "node src/worker.js"
   }
 }
