@@ -36,7 +36,7 @@ _.each(subscriptionNames, function(subscriptionName){
     console.log(`Data: ${message.data}`);
     console.log(`Attributes: ${message.attributes}`);
 
-    // notifiers.emailNotifier.send({})
+    // notifiers.emailNotifier.send({});
 
     message.ack();
   }
