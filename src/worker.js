@@ -35,8 +35,16 @@ _.each(subscriptionNames, function(subscriptionName){
     console.log(`Received message: ${message.id}`);
     console.log(`Data: ${message.data}`);
     console.log(`Attributes: ${message.attributes}`);
-
-    // notifiers.emailNotifier.send({});
+    
+    // switch email template ID based on message attribute
+    switch(_.get(message, 'attributes.emailType')){
+    case 'student_eligible':
+      // notifiers.emailNotifier.send(credentials.pardot, { 
+      //   campaignId: 7339, 
+      //   email: _.get(message, 'email'),
+      // });
+      break;
+    }    
 
     message.ack();
   }

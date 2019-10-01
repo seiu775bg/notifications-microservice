@@ -3,6 +3,7 @@ const rp         = require('request-promise');
 const rq         = require('request');
 const Bottleneck = require('bottleneck');
 const util       = require('util');
+const Config  = require('./config/config');
 
 const limiter = new Bottleneck({
   maxConcurrent: 5,
@@ -80,6 +81,13 @@ class EmailNotifier{
   }
 
   authorize(key, email, password){
+    // 'form_params' => [
+    //     'user_key' => 'da25de77d19015bf83af24822779944f',
+    //     'email' => 'ian.follett+api@myseiubenefits.org',
+    //     'password' => 'x$4z2Nr5f&FC&31AAOEp3WBIdZ37g2',
+    //     'format' => 'json'
+    // ]
+
     var params = {
       user_key: key,
       email: email,
@@ -90,10 +98,31 @@ class EmailNotifier{
     this.request('POST', 'login', null, params);    
   }
 
-  send(payload){
-    return this.authorize.then(data) => {
-      let key = _.get(data, 'apiKey');
-      _.set(payload, { 'api_key', key });
+  send(credentials, params){
+    var payload = {};
+
+    // 'form_params' => [
+    //     'user_key' => 'da25de77d19015bf83af24822779944f',
+    //     'api_key' => $this->auth(),
+    //     'campaign_id' => $request->campaign?:'7339',
+    //     'prospect_email' => $request->email,
+    //     'from_user_id' => 17490373,
+    //     'email_template_id' => $request->template,
+    //     'operational_email' => true,
+    //     'format' => 'json'
+    // ]    
+    
+    return this.authorize(credentials).then(data) => {
+      payload = {
+        'user_key': _.get(credentials, 'key'),
+        'api_key': _.get(data, 'apiKey'),
+        'campaign_id': _.get(params, 'campaignId', '7339'),
+        'prospect_email': _.get(params, 'email'),
+        'from_user_id': _.get(credentials, 'userId'),
+        'email_template_id': _.get(credentials, 'templateId'),
+        'operational_email': true,
+        'format': 'json'
+      };
 
       this.post('email', 'send', payload);
     }
