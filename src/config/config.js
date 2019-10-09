@@ -11,11 +11,13 @@ internals.config = {
   pardot: {
     $filter: 'env',
     production: {
+      api_url: process.env.PARDOT_API_URL,
       user_key: process.env.USER_KEY_PROD,
       from_user_id: process.env.FROM_USER_ID_PROD,
       email_template_id: process.env.EMAIL_TEMPLATE_ID_PROD
     },
     $default: {
+      api_url: process.env.PARDOT_API_URL,
       user_key: process.env.USER_KEY_DEV,
       from_user_id: process.env.FROM_USER_ID_DEV,
       email_template_id: process.env.EMAIL_TEMPLATE_ID_DEV

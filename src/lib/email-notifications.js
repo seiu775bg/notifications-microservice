@@ -3,7 +3,7 @@ const rp         = require('request-promise');
 const rq         = require('request');
 const Bottleneck = require('bottleneck');
 const util       = require('util');
-const Config  = require('./config/config');
+const Config  = require('../config/config');
 
 const limiter = new Bottleneck({
   maxConcurrent: 5,
@@ -17,10 +17,7 @@ class EmailNotifier{
     this.url      = opt.uri;
     this.key      = opt.key;
     this.email    = opt.email;
-    this.password = opt.password;
-
     this.version     = opt.version || '4';
-    
   }
 
   getUrl(endpoint, action) {
@@ -35,9 +32,8 @@ class EmailNotifier{
     return url;
   }
 
-  request(method, endpoint, action, data) {
+   request(method, endpoint, action, data) {
     const url = this.getUrl(endpoint);
-    // const queryString = { login: this.login, password: this.password, criterion: { "Bookmark":"null", "ComparisonOperator":"Equal", "Value":"null" } };
 
     const options = {
       method: method,
@@ -95,7 +91,7 @@ class EmailNotifier{
       format: 'json'
     };
 
-    this.request('POST', 'login', null, params);    
+    return this.request('POST', 'login', null, params);    
   }
 
   send(credentials, params){
@@ -110,24 +106,29 @@ class EmailNotifier{
     //     'email_template_id' => $request->template,
     //     'operational_email' => true,
     //     'format' => 'json'
-    // ]    
-    
-    return this.authorize(credentials).then(data) => {
-      payload = {
-        'user_key': _.get(credentials, 'key'),
-        'api_key': _.get(data, 'apiKey'),
-        'campaign_id': _.get(params, 'campaignId', '7339'),
-        'prospect_email': _.get(params, 'email'),
-        'from_user_id': _.get(credentials, 'userId'),
-        'email_template_id': _.get(credentials, 'templateId'),
-        'operational_email': true,
-        'format': 'json'
-      };
+    // ]
 
-      this.post('email', 'send', payload);
-    }
+    var self = this;
+
+    return new Promise((resolve, reject) => {
+      self.authorize(credentials).then(function(data){
+        payload = {
+          'user_key': _.get(credentials, 'key'),
+          'api_key': _.get(data, 'apiKey'),
+          'campaign_id': _.get(params, 'campaignId', '7339'),
+          'prospect_email': _.get(params, 'email'),
+          'from_user_id': _.get(credentials, 'userId'),
+          'email_template_id': _.get(credentials, 'templateId'),
+          'operational_email': true,
+          'format': 'json'
+        };
+
+        resolve(self.post('email', 'send', payload));
+      });
+    }).catch(function(err){
+      throw err;
+    });
   }
-  
 }
 
 module.exports = EmailNotifier;
