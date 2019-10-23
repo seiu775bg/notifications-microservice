@@ -1,9 +1,11 @@
-const _          = require('lodash');
-const rp         = require('request-promise');
-const rq         = require('request');
-const Bottleneck = require('bottleneck');
-const util       = require('util');
-const Config  = require('../config/config');
+const _           = require('lodash');
+const rp          = require('request-promise');
+const rq          = require('request');
+const Bottleneck  = require('bottleneck');
+const util        = require('util');
+const Config      = require('../config/config');
+const axios       = require('axios');
+const parseString = require('xml2js').parseString;
 
 const limiter = new Bottleneck({
   maxConcurrent: 5,
@@ -12,7 +14,7 @@ const limiter = new Bottleneck({
 
 class EmailNotifier{
   constructor(opt){
-    console.log("EmailNotifier options received are ", util.inspect(opt, {depth: null, colors: true}));
+    // console.log("EmailNotifier options received are ", util.inspect(opt, {depth: null, colors: true}));
 
     this.url      = opt.uri;
     this.key      = opt.key;
@@ -23,28 +25,45 @@ class EmailNotifier{
   getUrl(endpoint, action) {
     let url = this.url.slice(-1) === '/' ? this.url : `${this.url}/`;
     if(action){
-      url = `${url}/${endpoint}/version/${this.version}/do/${action}`;
+      url = `${url}${endpoint}/version/${this.version}/do/${action}`;
     }else{
       // handle login (no action)
-      url = `${url}/${endpoint}/version/${this.version}`;
+      url = `${url}${endpoint}/version/${this.version}`;
     }
 
     return url;
   }
 
-   request(method, endpoint, action, data) {
-    const url = this.getUrl(endpoint);
+  request(method, endpoint, action, data, userKey, apiKey) {
+    let url = this.getUrl(endpoint, action);
 
     const options = {
+      url: url,
       method: method,
-      uri: url,
-      json: true
+      json: true,
+      transformResponse: [function (data) {
+        // pull out Pardot response data from their weird XML
+        return parseString(data, function (err, result) {
+          return result;
+        });
+      }]
     };
 
+    // handle login
+    if(action){
+      options.data = data;
+
+      _.set(options, 'headers', { 'Authorization': `Pardot user_key=${userKey},api_key=${apiKey}` });
+    }else{
+      // Object.assign(params, { params: { email: _.get(data, 'email'), password: _.get(data, 'password'), user_key: _.get(data, 'user_key')  }});
+      Object.assign(options, { params: { email: 'ian.follett+api@myseiubenefits.org', password: 'x$4z2Nr5f&FC&31AAOEp3WBIdZ37g2', user_key: 'da25de77d19015bf83af24822779944f'  }});
+    }
+
     return new Promise((resolve, reject) => {
-      limiter.schedule(() => rp(options))
-        .then((result) => {
-          resolve(result);
+      limiter.schedule(() => axios(options))
+        .then((response) => {
+
+          
         })
         .catch(function(err){
           throw err;
@@ -76,7 +95,7 @@ class EmailNotifier{
     return this.request('OPTIONS', endpoint, action, null);
   }
 
-  authorize(key, email, password){
+  authorize(credentials){
     // 'form_params' => [
     //     'user_key' => 'da25de77d19015bf83af24822779944f',
     //     'email' => 'ian.follett+api@myseiubenefits.org',
@@ -85,13 +104,13 @@ class EmailNotifier{
     // ]
 
     var params = {
-      user_key: key,
-      email: email,
-      password: password,
+      user_key: _.get(credentials, 'key'),
+      email: _.get(credentials, 'email'),
+      password: _.get(credentials, 'password'),
       format: 'json'
     };
 
-    return this.request('POST', 'login', null, params);    
+    return this.request('POST', 'login', null, params);
   }
 
   send(credentials, params){
@@ -123,7 +142,9 @@ class EmailNotifier{
           'format': 'json'
         };
 
-        resolve(self.post('email', 'send', payload));
+        resolve(self.post('email', 'send', payload, _.get(credentials, 'key'), _.get(data, 'apiKey')));
+      }).catch(function(err){
+        throw err;
       });
     }).catch(function(err){
       throw err;

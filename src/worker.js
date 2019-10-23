@@ -13,6 +13,8 @@ const credentials = {
   pardot: {
     uri: Config.get('/pardot/api_url'),
     key: Config.get('/pardot/user_key'),
+    email: Config.get('/pardot/email'),
+    password: Config.get('/pardot/password'),
     userId: Config.get('/pardot/from_user_id'),
     templateId: Config.get('/pardot/email_template_id')
   }
@@ -28,32 +30,28 @@ if (process.env.NODE_ENV === "production") {
 }
 
 _.each(subscriptionNames, function(subscriptionName){
-  console.log("Subscribing to ", subscriptionName);
+  switch(subscriptionName){
+  case 'projects/seiu-demo-jenkins-x/subscriptions/dev-notifications-microservice':
+    // receives a student's email from RegistrationController
+    console.log("Subscribing to ", subscriptionName);
 
-  // References an existing subscription
-  const subscription = pubsub.subscription(subscriptionName);
+    // References an existing subscription
+    const subscription = pubsub.subscription(subscriptionName);
 
-  const messageHandler = message => {
-    console.log(`Received message: ${message.id}`);
-    console.log(`Data: ${message.data}`);
-    console.log(`Attributes: ${message.attributes}`);
-    
-    // switch email template ID based on message attribute
-    switch(_.get(message, 'attributes.emailType')){
-    case 'student_eligible':
-      notifiers.emailNotifier.send(credentials.pardot, { 
-        campaignId: 7339, 
-        email: _.get(message.attributes, 'email'),
-      });
-      break;
-    }    
+    const messageHandler = message => {
+      console.log(`Received message: ${message.id}`);
+      console.log(`Data: ${message.data}`);
+      console.log(`Attributes: ${message.attributes}`);
 
-    message.ack();
+      notifiers.emailNotifier.send(credentials.pardot, { email: _.get(message.attributes, 'email') });
+
+      message.ack();
+    }
+
+    // Listen for new messages forever and ever
+    subscription.on(`message`, messageHandler);
+    console.log("Subscribed to ", subscriptionName);
+    break;
   }
-
-
-  // Listen for new messages forever and ever
-  subscription.on(`message`, messageHandler);
-  console.log("Subscribed to ", subscriptionName);
 
 });
